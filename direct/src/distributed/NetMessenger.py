@@ -1,13 +1,8 @@
+from pickle import dumps, loads
 
 from direct.directnotify import DirectNotifyGlobal
 from direct.distributed.PyDatagram import PyDatagram
 from direct.showbase.Messenger import Messenger
-
-import sys
-if sys.version_info >= (3, 0):
-    from pickle import dumps, loads
-else:
-    from cPickle import dumps, loads
 
 
 class NetMessenger(Messenger):
@@ -72,7 +67,7 @@ class NetMessenger(Messenger):
 
         messageType=self.__message2type[message]
         datagram.addUint16(messageType)
-        datagram.addString(str(dumps(sentArgs)))
+        datagram.addBlob(dumps(sentArgs))
 
         return datagram
 
@@ -108,7 +103,7 @@ class NetMessenger(Messenger):
             return
 
         message = self.__type2message[msgType]
-        sentArgs=loads(di.getString())
+        sentArgs=loads(di.getBlob())
 
         if type(sentArgs) != list:
             self.notify.warning('Received non-list item in %s message: %r' %
