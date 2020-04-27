@@ -1,8 +1,27 @@
-from pickle import dumps, loads
-
 from direct.directnotify import DirectNotifyGlobal
 from direct.distributed.PyDatagram import PyDatagram
 from direct.showbase.Messenger import Messenger
+from pickle import dumps, loads
+
+
+# Messages do not need to be in the MESSAGE_TYPES list.
+# This is just an optimization.  If the message is found
+# in this list, it is reduced to an integer index and
+# the message string is not sent.  Otherwise, the message
+# string is sent in the datagram.
+MESSAGE_TYPES=(
+    "avatarOnline",
+    "avatarOffline",
+    "create",
+    "needUberdogCreates",
+    "transferDo",
+)
+
+# This is the reverse look up for the recipient of the
+# datagram:
+MESSAGE_STRINGS={}
+for i in zip(MESSAGE_TYPES, range(1, len(MESSAGE_TYPES)+1)):
+    MESSAGE_STRINGS[i[0]]=i[1]
 
 
 class NetMessenger(Messenger):
