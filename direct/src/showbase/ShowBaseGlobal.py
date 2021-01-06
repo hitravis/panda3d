@@ -2,14 +2,19 @@
 :class:`~.ShowBase.ShowBase` instance, as an alternative to using the builtin
 scope.
 
-Note that you cannot directly import `base` from this module since ShowBase
-may not have been created yet; instead, ShowBase dynamically adds itself to
-this module's scope when instantiated."""
+Many of the variables contained in this module are also automatically written
+to the :mod:`builtins` module when ShowBase is instantiated, making them
+available to any Python code.  Importing them from this module instead can make
+it easier to see where these variables are coming from.
+
+Note that you cannot directly import :data:`~builtins.base` from this module
+since ShowBase may not have been created yet; instead, ShowBase dynamically
+adds itself to this module's scope when instantiated."""
 
 __all__ = []
 
-from .ShowBase import ShowBase, WindowControls
-from direct.directnotify.DirectNotifyGlobal import directNotify, giveNotify
+from .ShowBase import ShowBase, WindowControls # pylint: disable=unused-import
+from direct.directnotify.DirectNotifyGlobal import directNotify, giveNotify # pylint: disable=unused-import
 from panda3d.core import VirtualFileSystem, Notify, ClockObject, PandaSystem
 from panda3d.core import ConfigPageManager, ConfigVariableManager
 from panda3d.core import NodePath, PGTop
@@ -17,8 +22,8 @@ from . import DConfig as config
 
 __dev__ = config.GetBool('want-dev', __debug__)
 
-#: The global instance of the :class:`~panda3d.core.VirtualFileSystem`, as
-#: obtained using :meth:`panda3d.core.VirtualFileSystem.getGlobalPtr()`.
+#: The global instance of the :ref:`virtual-file-system`, as obtained using
+#: :meth:`panda3d.core.VirtualFileSystem.getGlobalPtr()`.
 vfs = VirtualFileSystem.getGlobalPtr()
 
 #: The default Panda3D output stream for notifications and logging, as
