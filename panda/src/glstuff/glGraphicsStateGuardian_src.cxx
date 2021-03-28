@@ -93,6 +93,11 @@ PStatCollector CLP(GraphicsStateGuardian)::_fbo_bind_pcollector("Draw:Bind FBO")
 PStatCollector CLP(GraphicsStateGuardian)::_check_error_pcollector("Draw:Check errors");
 PStatCollector CLP(GraphicsStateGuardian)::_check_residency_pcollector("*:PStats:Check residency");
 
+#if defined(HAVE_CG) && !defined(OPENGLES)
+AtomicAdjust::Integer CLP(GraphicsStateGuardian)::_num_gsgs_with_cg_contexts = 0;
+pvector<CGcontext> CLP(GraphicsStateGuardian)::_destroyed_cg_contexts;
+#endif
+
 // The following noop functions are assigned to the corresponding glext
 // function pointers in the class, in case the functions are not defined by
 // the GL, just so it will always be safe to call the extension functions.
@@ -530,7 +535,7 @@ CLP(GraphicsStateGuardian)(GraphicsEngine *engine, GraphicsPipe *pipe) :
   _shader_point_size = false;
 #endif
 
-#ifdef HAVE_CG
+#if defined(HAVE_CG) && !defined(OPENGLES)
   _cg_context = 0;
 #endif
 
@@ -1350,11 +1355,34 @@ reset() {
   _supports_packed_dabc = false;
   _supports_packed_ufloat = false;
 #else
-  _supports_packed_dabc = is_at_least_gl_version(3, 2) ||
+  _supports_packed_dabc = (is_at_least_gl_version(3, 2) ||
                           has_extension("GL_ARB_vertex_array_bgra") ||
-                          has_extension("GL_EXT_vertex_array_bgra");
+                          has_extension("GL_EXT_vertex_array_bgra")) && gl_support_vertex_array_bgra;
+
   _supports_packed_ufloat = is_at_least_gl_version(4, 4) ||
                             has_extension("GL_ARB_vertex_type_10f_11f_11f_rev");
+
+  if (_supports_packed_dabc) {
+    int number = 0;
+    if (_gl_renderer.compare(0, 14, "AMD Radeon RX ") == 0) {
+      number = atoi(_gl_renderer.c_str() + 14);
+    }
+    else if (_gl_renderer.compare(0, 10, "Radeon RX ") == 0) {
+      number = atoi(_gl_renderer.c_str() + 10);
+    }
+
+    // This is buggy for RDNA cards.  Verified on 5700 XT, reportedly also
+    // occurs on the entire 5*00 and 6*00 line.
+    if (number >= 5000 && number < 8000) {
+      _supports_packed_dabc = false;
+
+      if (GLCAT.is_debug()) {
+        GLCAT.debug()
+          << "Detected AMD Radeon RX " << number
+          << ", disabling use of GL_BGRA vertex attributes\n";
+      }
+    }
+  }
 #endif
 
 #ifdef OPENGLES
@@ -11784,12 +11812,47 @@ set_state_and_transform(const RenderState *target,
 void CLP(GraphicsStateGuardian)::
 free_pointers() {
 #if defined(HAVE_CG) && !defined(OPENGLES)
-  if (_cg_context != 0) {
-    cgDestroyContext(_cg_context);
-    _cg_context = 0;
+  if (_cg_context) {
+    _destroyed_cg_contexts.push_back(_cg_context);
+    _cg_context = nullptr;
+
+    // Don't destroy the Cg context until the last GSG that uses Cg has been
+    // destroyed.  This works around a Cg bug, see #1117.
+    if (!AtomicAdjust::dec(_num_gsgs_with_cg_contexts)) {
+      for (CGcontext context : _destroyed_cg_contexts) {
+        cgDestroyContext(context);
+      }
+      _destroyed_cg_contexts.clear();
+    }
   }
 #endif
 }
+
+/**
+ * Returns a Cg context for this GSG.
+ */
+#if defined(HAVE_CG) && !defined(OPENGLES)
+CGcontext CLP(GraphicsStateGuardian)::
+get_cg_context() {
+  CGcontext context = _cg_context;
+  if (context == nullptr) {
+    context = cgCreateContext();
+
+#if CG_VERSION_NUM >= 3100
+    // This just sounds like a good thing to do.
+    cgGLSetContextGLSLVersion(context, cgGLDetectGLSLVersion());
+    if (_shader_caps._active_vprofile == CG_PROFILE_GLSLV) {
+      cgGLSetContextOptimalOptions(context, CG_PROFILE_GLSLC);
+    }
+#endif
+
+    AtomicAdjust::inc(_num_gsgs_with_cg_contexts);
+    _cg_context = context;
+  }
+
+  return context;
+}
+#endif
 
 /**
  * This is called by set_state_and_transform() when the texture state has
