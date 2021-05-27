@@ -85,6 +85,7 @@ PUBLISHED:
 public:
 
   // Methods derived from PandaNode
+  virtual bool is_renderable() const;
   virtual bool safe_to_flatten() const;
   virtual bool safe_to_combine() const;
   virtual void add_for_draw(CullTraverser *trav, CullTraverserData &data);

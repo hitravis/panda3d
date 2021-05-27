@@ -46,6 +46,7 @@ public:
   virtual void xform(const LMatrix4 &mat);
 
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data);
+  virtual bool is_renderable() const;
 
 PUBLISHED:
   INLINE void set_plane(const LPlane &plane);

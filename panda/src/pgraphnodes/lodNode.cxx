@@ -146,8 +146,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   PN_stdfloat lod_scale = cdata->_lod_scale *
     trav->get_scene()->get_camera_node()->get_lod_scale();
 
-  Children children = get_children();
-  int num_children = std::min(children.get_num_children(), cdata->_switch_vector.size());
+  int num_children = std::min(get_num_children(), (int)cdata->_switch_vector.size());
 
   if (data._instances == nullptr || cdata->_got_force_switch) {
     LPoint3 center = cdata->_center * rel_transform->get_mat();
@@ -164,8 +163,11 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
       if (in_range) {
         // This switch level is in range.  Draw its children.
-        const PandaNode::DownConnection &child = children.get_child_connection(index);
-        trav->traverse_down(data, child);
+        PandaNode *child = get_child(index);
+        if (child != nullptr) {
+          CullTraverserData next_data(data, child);
+          trav->traverse(next_data);
+        }
       }
     }
   }
@@ -191,8 +193,12 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       CPT(InstanceList) instances = data._instances->without(in_range[index]);
       if (!instances->empty()) {
         // At least one instance is visible in this switch level.
-        const PandaNode::DownConnection &child = children.get_child_connection(index);
-        trav->traverse_down(data, child);
+        PandaNode *child = get_child(index);
+        if (child != nullptr) {
+          CullTraverserData next_data(data, child);
+          next_data._instances = instances;
+          trav->traverse(next_data);
+        }
       }
     }
   }
@@ -429,23 +435,26 @@ show_switches_cull_callback(CullTraverser *trav, CullTraverserData &data) {
       if (in_range) {
         // This switch level is in range.  Draw its children in the funny
         // wireframe mode.
-        Children children = get_children();
-        if (index < children.get_num_children()) {
-          const PandaNode::DownConnection &child = children.get_child_connection(index);
-          trav->traverse_down(data, child, data._state->compose(sw.get_viz_model_state()));
+        if (index < get_num_children()) {
+          PandaNode *child = get_child(index);
+          if (child != nullptr) {
+            CullTraverserData next_data3(data, child);
+            next_data3._state = next_data3._state->compose(sw.get_viz_model_state());
+            trav->traverse(next_data3);
+          }
         }
 
         // And draw the spindle in this color.
-        //CullTraverserData next_data2(data, sw.get_spindle_viz());
-        //next_data2.apply_transform(viz_transform);
-        //trav->traverse(next_data2);
+        CullTraverserData next_data2(data, sw.get_spindle_viz());
+        next_data2.apply_transform(viz_transform);
+        trav->traverse(next_data2);
       }
 
       // Draw the rings for this switch level.  We do this after we have drawn
       // the geometry and the spindle.
-      //CullTraverserData next_data(data, sw.get_ring_viz());
-      //next_data.apply_transform(viz_transform);
-      //trav->traverse(next_data);
+      CullTraverserData next_data(data, sw.get_ring_viz());
+      next_data.apply_transform(viz_transform);
+      trav->traverse(next_data);
     }
   }
 

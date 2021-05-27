@@ -132,9 +132,7 @@ traverse(const NodePath &root) {
                            _initial_state, _view_frustum,
                            _current_thread);
 
-    if (data.is_in_view(_camera_mask)) {
-      do_traverse(data);
-    }
+    traverse(data);
 
     // Finally add the lines to be drawn
     if (debug_portal_cull) {
@@ -145,68 +143,45 @@ traverse(const NodePath &root) {
     NodePath cull_center = _scene_setup->get_cull_center();
     CPT(TransformState) transform = cull_center.get_transform(root);
 
-    CullTraverserData my_data(data, portal_viewer._previous,
-                              data._net_transform->compose(transform),
-                              data._state, data._view_frustum);
-    if (my_data.is_in_view(_camera_mask)) {
-      do_traverse(my_data);
-    }
+    CullTraverserData my_data(data, portal_viewer._previous);
+    my_data._net_transform = my_data._net_transform->compose(transform);
+    traverse(my_data);
 
   } else {
     CullTraverserData data(root, TransformState::make_identity(),
                            _initial_state, _view_frustum,
                            _current_thread);
 
-    if (data.is_in_view(_camera_mask)) {
-      do_traverse(data);
-    }
+    do_traverse(data);
   }
 }
 
 /**
- * Internal method called by traverse() and traverse_down().  Traverses the
- * given node, assuming it has already been checked with is_in_view().
+ * Traverses from the next node with the given data, which has been
+ * constructed with the node but has not yet been converted into the node's
+ * space.
  */
 void CullTraverser::
-do_traverse(CullTraverserData &data) {
-#ifndef NDEBUG
-  if (UNLIKELY(pgraph_cat.is_spam())) {
-    pgraph_cat.spam()
-      << "\n" << data.get_node_path()
-      << " " << data._draw_mask << "\n";
-  }
-#endif
+traverse(CullTraverserData &data) {
+  do_traverse(data);
+}
 
-  PandaNode *node = data.node();
+/**
+ * Traverses all the children of the indicated node, with the given data,
+ * which has been converted into the node's space.
+ */
+void CullTraverser::
+traverse_below(CullTraverserData &data) {
+  _nodes_pcollector.add_level(1);
   PandaNodePipelineReader *node_reader = data.node_reader();
-  int fancy_bits = node_reader->get_fancy_bits();
+  PandaNode *node = data.node();
 
-  if (fancy_bits == 0 && data._cull_planes == nullptr) {
-    // Nothing interesting in this node; just move on.
-  }
-  else {
-    // Something in this node is worth taking a closer look.
-    if (fancy_bits & PandaNode::FB_show_bounds) {
-      // If we should show the bounding volume for this node, make it up
-      // now.
-      show_bounds(data, (fancy_bits & PandaNode::FB_show_tight_bounds) != 0);
-    }
-
-    data.apply_transform_and_state(this);
-
-    if (fancy_bits & PandaNode::FB_cull_callback) {
-      if (!node->cull_callback(this, data)) {
-        return;
-      }
-    }
-  }
-
-  if ((fancy_bits & PandaNode::FB_renderable) != 0 &&
-      !data.is_this_node_hidden(_camera_mask)) {
+  if (!data.is_this_node_hidden(_camera_mask)) {
     node->add_for_draw(this, data);
 
     // Check for a decal effect.
-    if (fancy_bits & PandaNode::FB_decal) {
+    const RenderEffects *node_effects = node_reader->get_effects();
+    if (node_effects->has_decal()) {
       // If we *are* implementing decals with DepthOffsetAttribs, apply it
       // now, so that each child of this node gets offset by a tiny amount.
       data._state = data._state->compose(get_depth_offset_state());
@@ -220,15 +195,22 @@ do_traverse(CullTraverserData &data) {
     }
   }
 
-  _nodes_pcollector.add_level(1);
-
   // Now visit all the node's children.
   PandaNode::Children children = node_reader->get_children();
   node_reader->release();
   int num_children = children.get_num_children();
-  for (int i = 0; i < num_children; ++i) {
-    const PandaNode::DownConnection &child = children.get_child_connection(i);
-    traverse_down(data, child, data._state);
+  if (!node->has_selective_visibility()) {
+    for (int i = 0; i < num_children; ++i) {
+      CullTraverserData next_data(data, children.get_child(i));
+      do_traverse(next_data);
+    }
+  } else {
+    int i = node->get_first_visible_child();
+    while (i < num_children) {
+      CullTraverserData next_data(data, children.get_child(i));
+      do_traverse(next_data);
+      i = node->get_next_visible_child(i);
+    }
   }
 }
 
@@ -261,6 +243,16 @@ draw_bounding_volume(const BoundingVolume *vol,
                          internal_transform);
     _cull_handler->record_object(inner_viz, this);
   }
+}
+
+/**
+ * Returns true if the current node is fully or partially within the viewing
+ * area and should be drawn, or false if it (and all of its children) should
+ * be pruned.
+ */
+bool CullTraverser::
+is_in_view(CullTraverserData &data) {
+  return data.is_in_view(_camera_mask);
 }
 
 /**

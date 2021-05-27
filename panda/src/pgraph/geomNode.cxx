@@ -59,8 +59,6 @@ GeomNode(const std::string &name) :
 
   // GeomNodes have a certain set of bits on by default.
   set_into_collide_mask(get_default_collide_mask());
-
-  set_renderable();
 }
 
 /**
@@ -485,6 +483,17 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point, bool &found_any,
 }
 
 /**
+ * Returns true if there is some value to visiting this particular node during
+ * the cull traversal for any camera, false otherwise.  This will be used to
+ * optimize the result of get_net_draw_show_mask(), so that any subtrees that
+ * contain only nodes for which is_renderable() is false need not be visited.
+ */
+bool GeomNode::
+is_renderable() const {
+  return true;
+}
+
+/**
  * Adds the node's contents to the CullResult we are building up during the
  * cull traversal, so that it will be drawn at render time.  For most nodes
  * other than GeomNodes, this is a do-nothing operation.
@@ -552,7 +561,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         // Cull this Geom.
         continue;
       }
-      if (data._cull_planes != nullptr) {
+      if (!data._cull_planes->is_empty()) {
         // Also cull the Geom against the cull planes.
         CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
         const GeometricBoundingVolume *geom_gbv =

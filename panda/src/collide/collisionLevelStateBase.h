@@ -52,8 +52,6 @@ public:
   INLINE CollisionLevelStateBase(const NodePath &node_path);
   INLINE CollisionLevelStateBase(const CollisionLevelStateBase &parent,
                                  PandaNode *child);
-  INLINE CollisionLevelStateBase(const CollisionLevelStateBase &parent,
-                                 const PandaNode::DownConnection &child);
   INLINE CollisionLevelStateBase(const CollisionLevelStateBase &copy);
   INLINE void operator = (const CollisionLevelStateBase &copy);
 
@@ -69,7 +67,6 @@ public:
   INLINE const CollisionSolid *get_collider(int n) const;
   INLINE CollisionNode *get_collider_node(int n) const;
   INLINE NodePath get_collider_node_path(int n) const;
-  INLINE const GeometricBoundingVolume *get_node_bound() const;
   INLINE const GeometricBoundingVolume *get_local_bound(int n) const;
   INLINE const GeometricBoundingVolume *get_parent_bound(int n) const;
 
@@ -82,8 +79,6 @@ protected:
   typedef PTA(ColliderDef) Colliders;
   Colliders _colliders;
   CollideMask _include_mask;
-
-  const GeometricBoundingVolume *_node_gbv = nullptr;
 
   typedef PTA(CPT(GeometricBoundingVolume)) BoundingVolumes;
   BoundingVolumes _local_bounds;
