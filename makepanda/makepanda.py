@@ -292,6 +292,8 @@ def parseopts(args):
         OSX_ARCHS.append("arm64")
     elif target_archs:
         OSX_ARCHS = target_archs
+    elif GetTarget() == 'darwin':
+        OSX_ARCHS = (GetTargetArch(),)
 
     try:
         SetOptimize(int(optimize))
@@ -382,8 +384,9 @@ MAJOR_VERSION = '.'.join(VERSION.split('.')[:2])
 
 # Now determine the distutils-style platform tag for the target system.
 target = GetTarget()
+target_arch = GetTargetArch()
 if target == 'windows':
-    if GetTargetArch() == 'x64':
+    if target_arch == 'x64':
         PLATFORM = 'win-amd64'
     else:
         PLATFORM = 'win32'
@@ -391,7 +394,7 @@ if target == 'windows':
 elif target == 'darwin':
     arch_tag = None
     if not OSX_ARCHS:
-        arch_tag = GetTargetArch()
+        arch_tag = target_arch
     elif len(OSX_ARCHS) == 1:
         arch_tag = OSX_ARCHS[0]
     elif frozenset(OSX_ARCHS) == frozenset(('i386', 'ppc')):
@@ -416,45 +419,53 @@ elif target == 'darwin':
 
 elif target == 'linux' and (os.path.isfile("/lib/libc-2.5.so") or os.path.isfile("/lib64/libc-2.5.so")) and os.path.isdir("/opt/python"):
     # This is manylinux1.  A bit of a sloppy check, though.
-    if GetTargetArch() in ('x86_64', 'amd64'):
+    if target_arch in ('x86_64', 'amd64'):
         PLATFORM = 'manylinux1-x86_64'
-    elif GetTargetArch() in ('arm64', 'aarch64'):
+    elif target_arch in ('arm64', 'aarch64'):
         PLATFORM = 'manylinux1-aarch64'
     else:
         PLATFORM = 'manylinux1-i686'
 
 elif target == 'linux' and (os.path.isfile("/lib/libc-2.12.so") or os.path.isfile("/lib64/libc-2.12.so")) and os.path.isdir("/opt/python"):
     # Same sloppy check for manylinux2010.
-    if GetTargetArch() in ('x86_64', 'amd64'):
+    if target_arch in ('x86_64', 'amd64'):
         PLATFORM = 'manylinux2010-x86_64'
-    elif GetTargetArch() in ('arm64', 'aarch64'):
+    elif target_arch in ('arm64', 'aarch64'):
         PLATFORM = 'manylinux2010-aarch64'
     else:
         PLATFORM = 'manylinux2010-i686'
 
 elif target == 'linux' and (os.path.isfile("/lib/libc-2.17.so") or os.path.isfile("/lib64/libc-2.17.so")) and os.path.isdir("/opt/python"):
     # Same sloppy check for manylinux2014.
-    if GetTargetArch() in ('x86_64', 'amd64'):
+    if target_arch in ('x86_64', 'amd64'):
         PLATFORM = 'manylinux2014-x86_64'
-    elif GetTargetArch() in ('arm64', 'aarch64'):
+    elif target_arch in ('arm64', 'aarch64'):
         PLATFORM = 'manylinux2014-aarch64'
     else:
         PLATFORM = 'manylinux2014-i686'
 
 elif target == 'linux' and (os.path.isfile("/lib/i386-linux-gnu/libc-2.24.so") or os.path.isfile("/lib/x86_64-linux-gnu/libc-2.24.so")) and os.path.isdir("/opt/python"):
     # Same sloppy check for manylinux_2_24.
-    if GetTargetArch() in ('x86_64', 'amd64'):
+    if target_arch in ('x86_64', 'amd64'):
         PLATFORM = 'manylinux_2_24-x86_64'
-    elif GetTargetArch() in ('arm64', 'aarch64'):
+    elif target_arch in ('arm64', 'aarch64'):
         PLATFORM = 'manylinux_2_24-aarch64'
     else:
         PLATFORM = 'manylinux_2_24-i686'
+
+elif target == 'linux' and os.path.isfile("/lib64/libc-2.28.so") and os.path.isfile('/etc/almalinux-release') and os.path.isdir("/opt/python"):
+    # Same sloppy check for manylinux_2_28.
+    if target_arch in ('x86_64', 'amd64'):
+        PLATFORM = 'manylinux_2_28-x86_64'
+    elif target_arch in ('arm64', 'aarch64'):
+        PLATFORM = 'manylinux_2_28-aarch64'
+    else:
+        raise RuntimeError('Unhandled arch %s, please file a bug report!' % (target_arch))
 
 elif not CrossCompiling():
     if HasTargetArch():
         # Replace the architecture in the platform string.
         platform_parts = get_platform().rsplit('-', 1)
-        target_arch = GetTargetArch()
         if target_arch == 'amd64':
             target_arch = 'x86_64'
         PLATFORM = platform_parts[0] + '-' + target_arch
@@ -463,7 +474,6 @@ elif not CrossCompiling():
         PLATFORM = get_platform()
 
 else:
-    target_arch = GetTargetArch()
     if target_arch == 'amd64':
         target_arch = 'x86_64'
     PLATFORM = '{0}-{1}'.format(target, target_arch)
@@ -968,6 +978,9 @@ if (COMPILER=="GCC"):
         if not PkgSkip("ARTOOLKIT"):
             LibName("ARTOOLKIT", "-Wl,--exclude-libs,libAR.a")
             LibName("ARTOOLKIT", "-Wl,--exclude-libs,libARMulti.a")
+
+        if not PkgSkip("HARFBUZZ"):
+            LibName("HARFBUZZ", "-Wl,--exclude-libs,libharfbuzz.a")
 
         if not PkgSkip("MIMALLOC"):
             LibName("MIMALLOC", "-Wl,--exclude-libs,libmimalloc.a")
@@ -2378,7 +2391,7 @@ DTOOL_CONFIG=[
     ("HAVE_PROC_SELF_CMDLINE",         'UNDEF',                  '1'),
     ("HAVE_PROC_CURPROC_FILE",         'UNDEF',                  'UNDEF'),
     ("HAVE_PROC_CURPROC_MAP",          'UNDEF',                  'UNDEF'),
-    ("HAVE_PROC_SELF_CMDLINE",         'UNDEF',                  'UNDEF'),
+    ("HAVE_PROC_CURPROC_CMDLINE",      'UNDEF',                  'UNDEF'),
     ("HAVE_GLOBAL_ARGV",               '1',                      'UNDEF'),
     ("PROTOTYPE_GLOBAL_ARGV",          'UNDEF',                  'UNDEF'),
     ("GLOBAL_ARGV",                    '__argv',                 'UNDEF'),
@@ -2889,6 +2902,9 @@ Author-email: etc-panda3d@lists.andrew.cmu.edu
 ENTRY_POINTS = """[distutils.commands]
 build_apps = direct.dist.commands:build_apps
 bdist_apps = direct.dist.commands:bdist_apps
+
+[setuptools.finalize_distribution_options]
+build_apps = direct.dist.commands:finalize_distribution_options
 """
 
 if not PkgSkip("DIRECT"):
@@ -3258,7 +3274,6 @@ if not PkgSkip("PANDAPHYSICS"):
     CopyAllHeaders('panda/src/physics')
     if not PkgSkip("PANDAPARTICLESYSTEM"):
         CopyAllHeaders('panda/src/particlesystem')
-CopyAllHeaders('panda/src/dxml')
 CopyAllHeaders('panda/metalibs/panda')
 CopyAllHeaders('panda/src/audiotraits')
 CopyAllHeaders('panda/src/audiotraits')
@@ -3282,6 +3297,8 @@ if GetTarget() == 'windows':
     CopyAllHeaders('panda/src/wgldisplay')
 elif GetTarget() == 'darwin':
     CopyAllHeaders('panda/src/cocoadisplay')
+    if not PkgSkip('GL'):
+        CopyAllHeaders('panda/src/cocoagldisplay')
 elif GetTarget() == 'android':
     CopyAllHeaders('panda/src/android')
     CopyAllHeaders('panda/src/androiddisplay')
@@ -3311,6 +3328,7 @@ if not PkgSkip("DIRECT"):
     CopyAllHeaders('direct/src/distributed')
     CopyAllHeaders('direct/src/interval')
     CopyAllHeaders('direct/src/showbase')
+    CopyAllHeaders('direct/src/motiontrail')
     CopyAllHeaders('direct/src/dcparse')
 
 if not PkgSkip("NAMETAG") or not PkgSkip("MOVEMENT") or not PkgSkip("NAVIGATION"):
@@ -3836,6 +3854,7 @@ IGATEFILES=GetDirectoryContents('panda/src/pstatclient', ["*.h", "*_composite*.c
 IGATEFILES.remove("config_pstats.h")
 TargetAdd('libp3pstatclient.in', opts=OPTS, input=IGATEFILES)
 TargetAdd('libp3pstatclient.in', opts=['IMOD:panda3d.core', 'ILIB:libp3pstatclient', 'SRCDIR:panda/src/pstatclient'])
+PyTargetAdd('p3pstatclient_pStatClient_ext.obj', opts=OPTS, input='pStatClient_ext.cxx')
 
 #
 # DIRECTORY: panda/src/gobj/
@@ -4094,24 +4113,6 @@ TargetAdd('libp3recorder.in', opts=OPTS, input=IGATEFILES)
 TargetAdd('libp3recorder.in', opts=['IMOD:panda3d.core', 'ILIB:libp3recorder', 'SRCDIR:panda/src/recorder'])
 
 #
-# DIRECTORY: panda/src/dxml/
-#
-
-DefSymbol("TINYXML", "TIXML_USE_STL", "")
-
-OPTS=['DIR:panda/src/dxml', 'TINYXML']
-TargetAdd('tinyxml_composite1.obj', opts=OPTS, input='tinyxml_composite1.cxx')
-TargetAdd('libp3tinyxml.ilb', input='tinyxml_composite1.obj')
-
-OPTS=['DIR:panda/src/dxml', 'BUILDING:PANDA', 'TINYXML']
-TargetAdd('p3dxml_composite1.obj', opts=OPTS, input='p3dxml_composite1.cxx')
-
-OPTS=['DIR:panda/src/dxml', 'TINYXML']
-IGATEFILES=GetDirectoryContents('panda/src/dxml', ["*.h", "p3dxml_composite1.cxx"])
-TargetAdd('libp3dxml.in', opts=OPTS, input=IGATEFILES)
-TargetAdd('libp3dxml.in', opts=['IMOD:panda3d.core', 'ILIB:libp3dxml', 'SRCDIR:panda/src/dxml'])
-
-#
 # DIRECTORY: panda/metalibs/panda/
 #
 
@@ -4186,7 +4187,6 @@ TargetAdd('libpanda.dll', input='p3net_composite2.obj')
 TargetAdd('libpanda.dll', input='p3nativenet_composite1.obj')
 TargetAdd('libpanda.dll', input='p3pandabase_pandabase.obj')
 TargetAdd('libpanda.dll', input='libpandaexpress.dll')
-TargetAdd('libpanda.dll', input='p3dxml_composite1.obj')
 TargetAdd('libpanda.dll', input='libp3dtoolconfig.dll')
 TargetAdd('libpanda.dll', input='libp3dtool.dll')
 
@@ -4231,7 +4231,6 @@ PyTargetAdd('core_module.obj', input='libp3nativenet.in')
 PyTargetAdd('core_module.obj', input='libp3net.in')
 PyTargetAdd('core_module.obj', input='libp3pgui.in')
 PyTargetAdd('core_module.obj', input='libp3movies.in')
-PyTargetAdd('core_module.obj', input='libp3dxml.in')
 
 if PkgSkip("FREETYPE")==0:
     PyTargetAdd('core_module.obj', input='libp3pnmtext.in')
@@ -4276,7 +4275,6 @@ PyTargetAdd('core.pyd', input='libp3audio_igate.obj')
 PyTargetAdd('core.pyd', input='libp3pgui_igate.obj')
 PyTargetAdd('core.pyd', input='libp3net_igate.obj')
 PyTargetAdd('core.pyd', input='libp3nativenet_igate.obj')
-PyTargetAdd('core.pyd', input='libp3dxml_igate.obj')
 
 if PkgSkip("FREETYPE")==0:
     PyTargetAdd('core.pyd', input="libp3pnmtext_igate.obj")
@@ -4286,14 +4284,13 @@ PyTargetAdd('core.pyd', input='p3putil_ext_composite.obj')
 PyTargetAdd('core.pyd', input='p3pnmimage_pfmFile_ext.obj')
 PyTargetAdd('core.pyd', input='p3event_asyncFuture_ext.obj')
 PyTargetAdd('core.pyd', input='p3event_pythonTask.obj')
+PyTargetAdd('core.pyd', input='p3pstatclient_pStatClient_ext.obj')
 PyTargetAdd('core.pyd', input='p3gobj_ext_composite.obj')
 PyTargetAdd('core.pyd', input='p3pgraph_ext_composite.obj')
 PyTargetAdd('core.pyd', input='p3display_ext_composite.obj')
 PyTargetAdd('core.pyd', input='p3collide_ext_composite.obj')
 
 PyTargetAdd('core.pyd', input='core_module.obj')
-if not GetLinkAllStatic() and GetTarget() != 'emscripten':
-    PyTargetAdd('core.pyd', input='libp3tinyxml.ilb')
 PyTargetAdd('core.pyd', input='libp3interrogatedb.dll')
 PyTargetAdd('core.pyd', input=COMMON_PANDA_LIBS)
 PyTargetAdd('core.pyd', opts=['WINSOCK2'])
@@ -4681,15 +4678,24 @@ if GetTarget() not in ['windows', 'darwin'] and not PkgSkip("GL") and not PkgSki
 # DIRECTORY: panda/src/cocoadisplay/
 #
 
-if GetTarget() == 'darwin' and PkgSkip("COCOA")==0 and not PkgSkip("GL"):
-    OPTS=['DIR:panda/src/cocoadisplay', 'BUILDING:PANDAGL', 'GL', 'NVIDIACG', 'CGGL']
+if GetTarget() == 'darwin' and not PkgSkip("COCOA"):
+    OPTS=['DIR:panda/src/cocoadisplay', 'BUILDING:PANDAGL', 'COCOA']
     TargetAdd('p3cocoadisplay_composite1.obj', opts=OPTS, input='p3cocoadisplay_composite1.mm')
+
+#
+# DIRECTORY: panda/src/cocoagldisplay/
+#
+
+if GetTarget() == 'darwin' and not PkgSkip("COCOA") and not PkgSkip("GL"):
+    OPTS=['DIR:panda/src/cocoagldisplay', 'BUILDING:PANDAGL', 'GL', 'NVIDIACG', 'CGGL']
+    TargetAdd('p3cocoagldisplay_composite1.obj', opts=OPTS, input='p3cocoagldisplay_composite1.mm')
     OPTS=['DIR:panda/metalibs/pandagl', 'BUILDING:PANDAGL', 'GL', 'NVIDIACG', 'CGGL']
     TargetAdd('pandagl_pandagl.obj', opts=OPTS, input='pandagl.cxx')
     TargetAdd('libpandagl.dll', input='pandagl_pandagl.obj')
     TargetAdd('libpandagl.dll', input='p3glgsg_config_glgsg.obj')
     TargetAdd('libpandagl.dll', input='p3glgsg_glgsg.obj')
     TargetAdd('libpandagl.dll', input='p3cocoadisplay_composite1.obj')
+    TargetAdd('libpandagl.dll', input='p3cocoagldisplay_composite1.obj')
     if not PkgSkip('PANDAFX'):
         TargetAdd('libpandagl.dll', input='libpandafx.dll')
     TargetAdd('libpandagl.dll', input=COMMON_PANDA_LIBS)
@@ -5057,6 +5063,8 @@ if not PkgSkip("TINYDISPLAY"):
     OPTS=['DIR:panda/src/tinydisplay', 'BUILDING:TINYDISPLAY', 'X11']
     if not PkgSkip("X11"):
         OPTS += ['X11']
+    if not PkgSkip("COCOA"):
+        OPTS += ['COCOA']
     TargetAdd('p3tinydisplay_composite1.obj', opts=OPTS, input='p3tinydisplay_composite1.cxx')
     TargetAdd('p3tinydisplay_composite2.obj', opts=OPTS, input='p3tinydisplay_composite2.cxx')
     TargetAdd('p3tinydisplay_ztriangle_1.obj', opts=OPTS, input='ztriangle_1.cxx')
@@ -5067,7 +5075,13 @@ if not PkgSkip("TINYDISPLAY"):
     if GetTarget() == 'windows':
         TargetAdd('libp3tinydisplay.dll', input='libp3windisplay.dll')
         TargetAdd('libp3tinydisplay.dll', opts=['WINIMM', 'WINGDI', 'WINKERNEL', 'WINOLDNAMES', 'WINUSER', 'WINMM'])
-    elif GetTarget() != 'darwin' and not PkgSkip("X11"):
+    elif GetTarget() == 'darwin':
+        if not PkgSkip("COCOA"):
+            TargetAdd('libp3tinydisplay_tinyCocoaGraphicsWindow.obj', opts=OPTS, input='tinyCocoaGraphicsWindow.mm')
+            TargetAdd('libp3tinydisplay.dll', input='libp3tinydisplay_tinyCocoaGraphicsWindow.obj')
+            TargetAdd('libp3tinydisplay.dll', input='p3cocoadisplay_composite1.obj')
+            TargetAdd('libp3tinydisplay.dll', opts=['COCOA', 'CARBON', 'QUARTZ'])
+    elif not PkgSkip("X11"):
         TargetAdd('libp3tinydisplay.dll', input='p3x11display_composite1.obj')
         TargetAdd('libp3tinydisplay.dll', opts=['X11'])
     TargetAdd('libp3tinydisplay.dll', input='p3tinydisplay_composite1.obj')
@@ -6009,7 +6023,7 @@ if not PkgSkip("PANDATOOL") and not PkgSkip("EGG"):
     TargetAdd('libp3ptloader.dll', input='libp3lwo.lib')
     TargetAdd('libp3ptloader.dll', input='libp3dxfegg.lib')
     TargetAdd('libp3ptloader.dll', input='libp3dxf.lib')
-    TargetAdd('libp3ptloader.dll', input='libp3objegg.lib')
+    #TargetAdd('libp3ptloader.dll', input='libp3objegg.lib')
     TargetAdd('libp3ptloader.dll', input='libp3vrmlegg.lib')
     TargetAdd('libp3ptloader.dll', input='libp3vrml.lib')
     TargetAdd('libp3ptloader.dll', input='libp3xfileegg.lib')
@@ -6325,6 +6339,8 @@ if PkgSkip("PYTHON") == 0:
         LibName('DEPLOYSTUB', "-Wl,--disable-new-dtags,-rpath,\\$ORIGIN")
         LibName('DEPLOYSTUB', "-Wl,-z,origin")
         LibName('DEPLOYSTUB', "-rdynamic")
+    elif GetTarget() == 'darwin':
+        LibName('DEPLOYSTUB', "-Wl,-sectcreate,__PANDA,__panda,/dev/null")
 
     PyTargetAdd('deploy-stub.exe', input='deploy-stub.obj')
     if GetTarget() == 'windows':
