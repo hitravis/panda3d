@@ -586,7 +586,7 @@ class ClientRepositoryBase(ConnectionRepository):
     def isLive(self):
         if ConfigVariableBool('force-live', False):
             return True
-        return not (__dev__ or launcher.isTestServer())
+        return not __dev__
 
     def isLocalId(self, id):
         # By default, no ID's are local.  See also

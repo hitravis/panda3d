@@ -703,7 +703,6 @@ additional-builtins=base,
                     render,
                     hidden,
                     cluster,
-                    launcher,
                     taskMgr,
                     localAvatar,
                     game
