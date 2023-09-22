@@ -12,6 +12,7 @@
 #
 #################################################################
 
+from panda3d.core import ConfigVariableBool
 from direct.showbase.DirectObject import *
 from direct.directtools.DirectGlobals import *
 from direct.directtools.DirectUtil import *
@@ -324,7 +325,7 @@ class DirectManipulationControl(DirectObject):
         if self.rotateAxis == 'x':
             SEditor.widget.setP(SEditor.widget, deltaAngle)
         elif self.rotateAxis == 'y':
-            if base.config.GetBool('temp-hpr-fix',0):
+            if ConfigVariableBool('temp-hpr-fix', False).getValue():
                 SEditor.widget.setR(SEditor.widget, deltaAngle)
             else:
                 SEditor.widget.setR(SEditor.widget, -deltaAngle)
@@ -456,7 +457,7 @@ class DirectManipulationControl(DirectObject):
         deltaAngle = angle - state.lastAngle
         state.lastAngle = angle
         # Mouse motion edge to edge of display region results in one full turn
-        if base.config.GetBool('temp-hpr-fix',0):
+        if ConfigVariableBool('temp-hpr-fix', False).getValue():
             relHpr(SEditor.widget, SEditor.camera, 0, 0, -deltaAngle)
         else:
             relHpr(SEditor.widget, SEditor.camera, 0, 0, deltaAngle)

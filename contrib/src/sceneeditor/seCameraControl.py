@@ -281,7 +281,7 @@ class DirectCameraControl(DirectObject):
         angle = getCrankAngle(state.coaCenter)
         deltaAngle = angle - state.lastAngle
         state.lastAngle = angle
-        if base.config.GetBool('temp-hpr-fix',0):
+        if ConfigVariableBool('temp-hpr-fix', False).getValue():
             self.camManipRef.setHpr(self.camManipRef, 0, 0, deltaAngle)
         else:
             self.camManipRef.setHpr(self.camManipRef, 0, 0, -deltaAngle)

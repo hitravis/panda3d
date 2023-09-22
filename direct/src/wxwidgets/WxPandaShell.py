@@ -1,6 +1,7 @@
 import wx
 from wx.lib.agw import fourwaysplitter as FWS
 
+from panda3d.core import ConfigVariableBool, ConfigVariableString
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase import ShowBaseGlobal
 from direct.directtools.DirectGlobals import SKIP_UNPICKABLE
@@ -38,8 +39,8 @@ class WxPandaShell(WxAppShell):
         if not base:
             base = ShowBase(False, windowType='none')
 
-        fDirect = (base.config.GetBool('want-directtools', 0) or
-                   (base.config.GetString("cluster-mode", '') != ''))
+        fDirect = (ConfigVariableBool('want-directtools', 0).getValue() or
+                   (ConfigVariableString("cluster-mode", '').getValue() != ''))
 
         self.fStartDirect = fStartDirect or fDirect
 

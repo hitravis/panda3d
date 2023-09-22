@@ -1,4 +1,5 @@
-from panda3d.core import DocumentSpec, Filename, HTTPClient, VirtualFileSystem, getModelPath
+from panda3d.core import DocumentSpec, Filename, HTTPClient, VirtualFileSystem, getModelPath, ConfigVariableBool, \
+                         ConfigVariableDouble, ConfigVariableString
 from panda3d.direct import CConnectionRepository, DCPacker
 from direct.task import Task
 from direct.task.TaskManagerGlobal import taskMgr
@@ -34,19 +35,19 @@ class ConnectionRepository(
     GarbageCollectTaskName = "allowGarbageCollect"
     GarbageThresholdTaskName = "adjustGarbageCollectThreshold"
 
-    def __init__(self, connectMethod, config, hasOwnerView = False,
+    def __init__(self, connectMethod, hasOwnerView = False,
                  threadedNet = None):
         assert self.notify.debugCall()
         if threadedNet is None:
             # Default value.
-            threadedNet = config.GetBool('threaded-net', False)
+            threadedNet = ConfigVariableBool('threaded-net', False).getValue()
 
         # let the C connection repository know whether we're supporting
         # 'owner' views of distributed objects (i.e. 'receives ownrecv',
         # 'I own this object and have a separate view of it regardless of
         # where it currently is located')
         CConnectionRepository.__init__(self, hasOwnerView, threadedNet)
-        self.setWantMessageBundling(config.GetBool('want-message-bundling', 1))
+        self.setWantMessageBundling(ConfigVariableBool('want-message-bundling', True).getValue())
         # DoInterestManager.__init__ relies on CConnectionRepository being
         # initialized
         DoInterestManager.__init__(self)
@@ -62,9 +63,7 @@ class ConnectionRepository(
         # thread (if there is one).
         self.accept(self._getLostConnectionEvent(), self.lostConnection)
 
-        self.config = config
-
-        if self.config.GetBool('verbose-repository'):
+        if ConfigVariableBool('verbose-repository').getValue():
             self.setVerbose(1)
 
         # Set this to 'http' to establish a connection to the server
@@ -89,7 +88,7 @@ class ConnectionRepository(
         # Set it to 'default' to use an appropriate interface
         # according to the type of ConnectionRepository we are
         # creating.
-        userConnectMethod = self.config.GetString('connect-method', 'default')
+        userConnectMethod = ConfigVariableString('connect-method', 'default').getValue()
         if userConnectMethod == 'http':
             connectMethod = self.CM_HTTP
         elif userConnectMethod == 'net':
@@ -121,7 +120,7 @@ class ConnectionRepository(
 
         self._serverAddress = ''
 
-        if self.config.GetBool('gc-save-all', 0):
+        if ConfigVariableBool('gc-save-all', False).getValue():
             # set gc to preserve every object involved in a cycle, even ones that
             # would normally be freed automatically during garbage collect
             # allows us to find and fix these cycles, reducing or eliminating the
@@ -129,11 +128,11 @@ class ConnectionRepository(
             # garbage collection CPU usage is O(n), n = number of Python objects
             gc.set_debug(gc.DEBUG_SAVEALL)
 
-        if self.config.GetBool('want-garbage-collect-task', 1):
+        if ConfigVariableBool('want-garbage-collect-task', True).getValue():
             # manual garbage-collect task
             taskMgr.add(self._garbageCollect, self.GarbageCollectTaskName, 200)
             # periodically increase gc threshold if there is no garbage
-            taskMgr.doMethodLater(self.config.GetFloat('garbage-threshold-adjust-delay', 5 * 60.),
+            taskMgr.doMethodLater(ConfigVariableDouble('garbage-threshold-adjust-delay', 5 * 60.).getValue(),
                                   self._adjustGcThreshold, self.GarbageThresholdTaskName)
 
         self._gcDefaultThreshold = gc.get_threshold()

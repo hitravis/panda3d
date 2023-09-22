@@ -2,6 +2,8 @@
 
 from panda3d.core import (
     ClockObject,
+    ConfigVariableInt,
+    ConfigVariableString,
     ConnectionWriter,
     Point3,
     QueuedConnectionManager,
@@ -37,14 +39,14 @@ class ClusterClient(DirectObject.DirectObject):
         self.__name__ = 'cluster'
         # First start up servers using direct daemon
         # What is the name of the client machine?
-        clusterClientDaemonHost = base.config.GetString(
-            'cluster-client-daemon', 'None')
+        clusterClientDaemonHost = ConfigVariableString(
+            'cluster-client-daemon', 'None').getValue()
         if clusterClientDaemonHost == 'None':
             clusterClientDaemonHost = os.popen('uname -n').read()
             clusterClientDaemonHost = clusterClientDaemonHost.replace('\n', '')
         # What daemon port are we using to communicate between client/servers
-        clusterClientDaemonPort = base.config.GetInt(
-            'cluster-client-daemon-port', CLUSTER_DAEMON_PORT)
+        clusterClientDaemonPort = ConfigVariableInt(
+            'cluster-client-daemon-port', CLUSTER_DAEMON_PORT).getValue()
         # Create a daemon
         self.daemon = DirectD()
         # Start listening for the response
@@ -442,8 +444,8 @@ class ClusterClientSync(ClusterClient):
 class DisplayConnection:
     def __init__(self, qcm, serverName, port, msgHandler):
         self.msgHandler = msgHandler
-        gameServerTimeoutMs = base.config.GetInt(
-            "cluster-server-timeout-ms", 300000)
+        gameServerTimeoutMs = ConfigVariableInt(
+            "cluster-server-timeout-ms", 300000).getValue()
         # A giant 300 second timeout.
         self.tcpConn = qcm.openTCPClientConnection(
             serverName, port, gameServerTimeoutMs)
@@ -589,7 +591,7 @@ class ClusterConfigItem:
 
 def createClusterClient():
     # setup camera offsets based on cluster-config
-    clusterConfig = base.config.GetString('cluster-config', 'single-server')
+    clusterConfig = ConfigVariableString('cluster-config', 'single-server').getValue()
     # No cluster config specified!
     if clusterConfig not in ClientConfigs:
         base.notify.warning(
@@ -624,7 +626,7 @@ def createClusterClient():
                 lens.setFilmOffset(fo[0], fo[1])
         else:
             serverConfigName = 'cluster-server-%s' % displayName
-            serverName = base.config.GetString(serverConfigName, '')
+            serverName = ConfigVariableString(serverConfigName, '').getValue()
             if serverName == '':
                 base.notify.warning(
                     '%s undefined in Configrc: expected by %s display client.'%
@@ -634,14 +636,14 @@ def createClusterClient():
                 # Daemon port
                 serverDaemonPortConfigName = (
                     'cluster-server-daemon-port-%s' % displayName)
-                serverDaemonPort = base.config.GetInt(
+                serverDaemonPort = ConfigVariableInt(
                     serverDaemonPortConfigName,
-                    CLUSTER_DAEMON_PORT)
+                    CLUSTER_DAEMON_PORT).getValue()
                 # TCP Server port
                 serverMsgPortConfigName = (
                     'cluster-server-msg-port-%s' % displayName)
-                serverMsgPort = base.config.GetInt(serverMsgPortConfigName,
-                                                   CLUSTER_SERVER_PORT)
+                serverMsgPort = ConfigVariableInt(serverMsgPortConfigName,
+                                                   CLUSTER_SERVER_PORT).getValue()
                 cci = ClusterConfigItem(
                     serverConfigName,
                     serverName,

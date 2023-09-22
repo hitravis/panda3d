@@ -34,7 +34,7 @@ class ClientRepositoryBase(ConnectionRepository):
                  connectMethod = None, threadedNet = None):
         if connectMethod is None:
             connectMethod = self.CM_HTTP
-        ConnectionRepository.__init__(self, connectMethod, base.config, hasOwnerView = True, threadedNet = threadedNet)
+        super().__init__(connectMethod, hasOwnerView = True, threadedNet = threadedNet)
         self.dcSuffix = dcSuffix
         if hasattr(self, 'setVerbose'):
             if ConfigVariableBool('verbose-clientrepository', False):

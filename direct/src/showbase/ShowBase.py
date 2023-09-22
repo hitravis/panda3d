@@ -112,7 +112,6 @@ from panda3d.core import (
 )
 from panda3d.direct import throw_new_frame, init_app_for_gui
 from panda3d.direct import storeAccessibilityShortcutKeys, allowAccessibilityShortcutKeys
-from . import DConfig
 
 # Register the extension methods for NodePath.
 from direct.extensions_native import NodePath_extensions # pylint: disable=unused-import
@@ -120,7 +119,6 @@ from direct.extensions_native import NodePath_extensions # pylint: disable=unuse
 # This needs to be available early for DirectGUI imports
 import sys
 import builtins
-builtins.config = DConfig  # type: ignore[attr-defined]
 
 from direct.directnotify.DirectNotifyGlobal import directNotify, giveNotify
 from .MessengerGlobal import messenger
@@ -158,9 +156,6 @@ def exitfunc():
 
 
 class ShowBase(DirectObject.DirectObject):
-
-    #: The deprecated `.DConfig` interface for accessing config variables.
-    config = DConfig
     notify = directNotify.newCategory("ShowBase")
 
     def __init__(self, fStartDirect=True, windowType=None):
@@ -517,8 +512,6 @@ class ShowBase(DirectObject.DirectObject):
         builtins.eventMgr = self.eventMgr
         builtins.messenger = self.messenger
         builtins.bboard = self.bboard
-        # Config needs to be defined before ShowBase is constructed
-        #builtins.config = self.config
         builtins.ostream = Notify.out()
         builtins.directNotify = directNotify
         builtins.giveNotify = giveNotify

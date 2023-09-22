@@ -2857,20 +2857,6 @@ except ImportError as err:
     if "No module named %s" not in str(err):
         raise""" % (module, module)
 
-panda_modules_code += """
-
-from direct.showbase import DConfig
-
-def get_config_showbase():
-    return DConfig
-
-def get_config_express():
-    return DConfig
-
-getConfigShowbase = get_config_showbase
-getConfigExpress = get_config_express
-"""
-
 exthelpers_code = """
 "This module is deprecated.  Import from direct.extensions_native.extension_native_helpers instead."
 from direct.extensions_native.extension_native_helpers import *

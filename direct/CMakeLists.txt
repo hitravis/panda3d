@@ -67,18 +67,7 @@ except ImportError as err:
 ")
   endforeach()
 
-  file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/pandac/PandaModules.py"
-    "from direct.showbase import DConfig
-
-def get_config_showbase():
-    return DConfig
-
-def get_config_express():
-    return DConfig
-
-getConfigShowbase = get_config_showbase
-getConfigExpress = get_config_express
-")
+  file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/pandac/PandaModules.py")
 
   # Now install ourselves:
   install_python_package(pandac SOURCE "${CMAKE_CURRENT_BINARY_DIR}/pandac" LIB COMPONENT Direct)
