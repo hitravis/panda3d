@@ -121,6 +121,7 @@ import sys
 import builtins
 
 from direct.directnotify.DirectNotifyGlobal import directNotify, giveNotify
+from direct.directnotify.Notifier import Notifier
 from .MessengerGlobal import messenger
 from .BulletinBoardGlobal import bulletinBoard
 from direct.task.TaskManagerGlobal import taskMgr
@@ -138,6 +139,7 @@ import importlib
 from direct.showbase import ExceptionVarDump
 from . import DirectObject
 from . import SfxPlayer
+from typing import ClassVar, Optional
 if __debug__:
     from direct.showbase import GarbageReport
     from direct.directutil import DeltaProfiler
@@ -156,7 +158,13 @@ def exitfunc():
 
 
 class ShowBase(DirectObject.DirectObject):
-    notify = directNotify.newCategory("ShowBase")
+
+    notify: ClassVar[Notifier] = directNotify.newCategory("ShowBase")
+    guiItems: ClassVar[dict]
+
+    render2d: NodePath
+    aspect2d: NodePath
+    pixel2d: NodePath
 
     def __init__(self, fStartDirect=True, windowType=None):
         """Opens a window, sets up a 3-D and several 2-D scene graphs, and
@@ -332,10 +340,10 @@ class ShowBase(DirectObject.DirectObject):
         self.tkRootCreated = False
 
         # This is used for syncing multiple PCs in a distributed cluster
-        try:
+        if hasattr(builtins, 'clusterSyncFlag'):
             # Has the cluster sync variable been set externally?
-            self.clusterSyncFlag = clusterSyncFlag
-        except NameError:
+            self.clusterSyncFlag = builtins.clusterSyncFlag
+        else:
             # Has the clusterSyncFlag been set via a config variable
             self.clusterSyncFlag = ConfigVariableBool('cluster-sync', False)
 
@@ -419,6 +427,7 @@ class ShowBase(DirectObject.DirectObject):
         #: `.Loader.Loader` object.
         self.loader = Loader.Loader(self)
         self.graphicsEngine.setDefaultLoader(self.loader.loader)
+        ShowBaseGlobal.loader = self.loader
 
         #: The global event manager, as imported from `.EventManagerGlobal`.
         self.eventMgr = eventMgr
@@ -705,10 +714,9 @@ class ShowBase(DirectObject.DirectObject):
         except Exception:
             pass
 
-        if hasattr(self, 'win'):
-            del self.win
-            del self.winList
-            del self.pipe
+        self.win = None
+        self.winList.clear()
+        self.pipe = None
 
     def makeDefaultPipe(self, printPipeTypes = None):
         """
@@ -721,7 +729,7 @@ class ShowBase(DirectObject.DirectObject):
             # When the user didn't specify an explicit setting, take the value
             # from the config variable. We could just omit the parameter, however
             # this way we can keep backward compatibility.
-            printPipeTypes = ConfigVariableBool("print-pipe-types", True)
+            printPipeTypes = ConfigVariableBool("print-pipe-types", True).value
 
         selection = GraphicsPipeSelection.getGlobalPtr()
         if printPipeTypes:
@@ -3407,7 +3415,7 @@ class ShowBase(DirectObject.DirectObject):
         # Set fWantTk to 0 to avoid starting Tk with this call
         self.startDirect(fWantDirect = fDirect, fWantTk = fTk, fWantWx = fWx)
 
-    def run(self): # pylint: disable=method-hidden
+    def run(self) -> None: # pylint: disable=method-hidden
         """This method runs the :class:`~direct.task.Task.TaskManager`
         when ``self.appRunner is None``, which is to say, when we are
         not running from within a p3d file.  When we *are* within a p3d

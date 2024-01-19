@@ -24,6 +24,7 @@ from panda3d.core import (
     WindowProperties,
 )
 from direct.showbase.DirectObject import DirectObject
+from direct.showbase import ShowBaseGlobal
 from direct.task.TaskManagerGlobal import taskMgr
 import math
 import copy
@@ -124,6 +125,7 @@ class TexMemWatcher(DirectObject):
         self.placedQSize = 0
 
         # If no GSG is specified, use the main GSG.
+        base = ShowBaseGlobal.base
         if gsg is None:
             gsg = base.win.getGsg()
         elif isinstance(gsg, GraphicsOutput):
@@ -382,7 +384,7 @@ class TexMemWatcher(DirectObject):
             self.cleanedUp = True
 
             # Remove the window.
-            base.graphicsEngine.removeWindow(self.win)
+            self.win.engine.removeWindow(self.win)
             self.win = None
             self.gsg = None
             self.pipe = None
