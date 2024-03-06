@@ -4,13 +4,15 @@ from panda3d.core import (
     ClockObject,
     ConfigVariableInt,
     ConfigVariableString,
-    ConnectionWriter,
     Point3,
-    QueuedConnectionManager,
-    QueuedConnectionReader,
     VBase3,
     Vec3,
     decomposeMatrix,
+)
+from panda3d.net import (
+    ConnectionWriter,
+    QueuedConnectionManager,
+    QueuedConnectionReader,
 )
 from .ClusterMsgs import (
     CLUSTER_DAEMON_PORT,
