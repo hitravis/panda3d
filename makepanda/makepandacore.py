@@ -357,11 +357,11 @@ def SetTarget(target, arch=None):
 
     elif target == 'android' or target.startswith('android-'):
         if arch is None:
-            # If compiling on Android, default to same architecture.  Otherwise, arm.
+            # If compiling on Android, default to same architecture.
             if host == 'android':
                 arch = host_arch
             else:
-                arch = 'armv7a'
+                exit('Specify an Android architecture using --arch')
 
         if arch == 'aarch64':
             arch = 'arm64'
@@ -371,12 +371,9 @@ def SetTarget(target, arch=None):
         target, _, api = target.partition('-')
         if api:
             ANDROID_API = int(api)
-        elif arch in ('mips64', 'arm64', 'x86_64'):
-            # 64-bit platforms were introduced in Android 21.
-            ANDROID_API = 21
         else:
             # Default to the lowest API level still supported by Google.
-            ANDROID_API = 19
+            ANDROID_API = 21
 
         # Determine the prefix for our gcc tools, eg. arm-linux-androideabi-gcc
         global ANDROID_ABI, ANDROID_TRIPLE
@@ -1422,6 +1419,9 @@ def GetThirdpartyDir():
     elif (target == 'android'):
         THIRDPARTYDIR = base + "/android-libs-%s/" % (target_arch)
 
+        if target_arch == 'armv7a' and not os.path.isdir(THIRDPARTYDIR):
+            THIRDPARTYDIR = base + "/android-libs-arm/"
+
     elif (target == 'emscripten'):
         THIRDPARTYDIR = base + "/emscripten-libs/"
 
@@ -1846,7 +1846,7 @@ def SmartPkgEnable(pkg, pkgconfig = None, libs = None, incs = None, defs = None,
             DefSymbol(target_pkg, d, v)
         return
 
-    elif not custom_loc and GetHost() == "darwin" and framework is not None:
+    elif not custom_loc and GetHost() == "darwin" and GetTarget() == "darwin" and framework is not None:
         prefix = SDK["MACOSX"]
         if (os.path.isdir(prefix + "/Library/Frameworks/%s.framework" % framework) or
             os.path.isdir(prefix + "/System/Library/Frameworks/%s.framework" % framework) or
@@ -2615,6 +2615,8 @@ def SdkLocateAndroid():
     # We need to redistribute the C++ standard library.
     stdlibc = os.path.join(ndk_root, 'sources', 'cxx-stl', 'llvm-libc++')
     stl_lib = os.path.join(stdlibc, 'libs', abi, 'libc++_shared.so')
+    if not os.path.isfile(stl_lib):
+        stl_lib = os.path.join(prebuilt_dir, 'sysroot', 'usr', 'lib', ANDROID_TRIPLE.rstrip('0123456789'), 'libc++_shared.so')
     CopyFile(os.path.join(GetOutputDir(), 'lib', 'libc++_shared.so'), stl_lib)
 
     # The Android support library polyfills C++ features not available in the

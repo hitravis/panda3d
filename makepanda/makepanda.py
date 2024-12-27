@@ -487,6 +487,8 @@ elif not CrossCompiling():
 else:
     if target_arch == 'amd64':
         target_arch = 'x86_64'
+    if target_arch == 'arm' and target == 'android':
+        target_arch = 'armv7a'
     PLATFORM = '{0}-{1}'.format(target, target_arch)
 
 
@@ -1376,10 +1378,10 @@ def CompileCxx(obj,src,opts):
                 cmd += ' -gcc-toolchain ' + SDK["ANDROID_GCC_TOOLCHAIN"].replace('\\', '/')
             cmd += ' -ffunction-sections -funwind-tables'
             cmd += ' -target ' + SDK["ANDROID_TRIPLE"]
-            if arch == 'armv7a':
+            if arch in ('armv7a', 'arm'):
                 cmd += ' -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16'
-            elif arch == 'arm':
-                cmd += ' -march=armv5te -mtune=xscale -msoft-float'
+            #elif arch == 'arm':
+            #    cmd += ' -march=armv5te -mtune=xscale -msoft-float'
             elif arch == 'mips':
                 cmd += ' -mips32'
             elif arch == 'mips64':
@@ -1902,7 +1904,7 @@ def CompileLink(dll, obj, opts):
                 cmd += ' -gcc-toolchain ' + SDK["ANDROID_GCC_TOOLCHAIN"].replace('\\', '/')
             cmd += " -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
             cmd += ' -target ' + SDK["ANDROID_TRIPLE"]
-            if arch == 'armv7a':
+            if arch in ('armv7a', 'arm'):
                 cmd += " -march=armv7-a -Wl,--fix-cortex-a8"
             elif arch == 'mips':
                 cmd += ' -mips32'
@@ -2077,13 +2079,23 @@ def CompileJava(target, src, opts):
     if GetHost() == 'android':
         cmd = "ecj "
     else:
-        cmd = "javac -bootclasspath " + BracketNameWithQuotes(SDK["ANDROID_JAR"]) + " "
+        cmd = "javac "
+        home = os.environ.get('JAVA_HOME')
+        if home:
+            javac_path = os.path.join(home, 'bin', 'javac')
+            if GetHost() == 'windows':
+                javac_path += '.exe'
+            if os.path.isfile(javac_path):
+                cmd = BracketNameWithQuotes(javac_path) + " "
+
+        cmd += "-Xlint:deprecation "
 
     optlevel = GetOptimizeOption(opts)
     if optlevel >= 4:
         cmd += "-debug:none "
 
-    cmd += "-cp " + GetOutputDir() + "/classes "
+    classpath = BracketNameWithQuotes(SDK["ANDROID_JAR"] + ":" + GetOutputDir() + "/classes")
+    cmd += "-cp " + classpath + " "
     cmd += "-d " + GetOutputDir() + "/classes "
     cmd += BracketNameWithQuotes(src)
     oscmd(cmd)
@@ -4931,11 +4943,13 @@ if GetTarget() == 'android':
     TargetAdd('org/panda3d/android/NativeIStream.class', opts=OPTS, input='NativeIStream.java')
     TargetAdd('org/panda3d/android/NativeOStream.class', opts=OPTS, input='NativeOStream.java')
     TargetAdd('org/panda3d/android/PandaActivity.class', opts=OPTS, input='PandaActivity.java')
+    TargetAdd('org/panda3d/android/PandaActivity$1.class', opts=OPTS+['DEPENDENCYONLY'], input='PandaActivity.java')
     TargetAdd('org/panda3d/android/PythonActivity.class', opts=OPTS, input='PythonActivity.java')
 
     TargetAdd('classes.dex', input='org/panda3d/android/NativeIStream.class')
     TargetAdd('classes.dex', input='org/panda3d/android/NativeOStream.class')
     TargetAdd('classes.dex', input='org/panda3d/android/PandaActivity.class')
+    TargetAdd('classes.dex', input='org/panda3d/android/PandaActivity$1.class')
     TargetAdd('classes.dex', input='org/panda3d/android/PythonActivity.class')
 
     TargetAdd('p3android_composite1.obj', opts=OPTS, input='p3android_composite1.cxx')
