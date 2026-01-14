@@ -16,10 +16,10 @@ if %PROCESSOR_ARCHITECTURE% == AMD64 (
 set thirdparty=thirdparty
 if defined MAKEPANDA_THIRDPARTY set thirdparty=%MAKEPANDA_THIRDPARTY%
 
-if exist %thirdparty%\win-python3.13%suffix%\python.exe (
-  set pythondir=win-python3.13%suffix%
+if exist %thirdparty%\win-python3.14%suffix%\python.exe (
+  set pythondir=win-python3.14%suffix%
 ) else (
-  set pythondir=win-python3.12%suffix%
+  set pythondir=win-python3.13%suffix%
 )
 
 if not exist makepanda\makepanda.py goto :missing1
