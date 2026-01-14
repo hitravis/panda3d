@@ -589,6 +589,7 @@ class ConnectionRepository(
 
         if self.http is None:
             try:
+                from panda3d.core import HTTPClient
                 self.http = HTTPClient()
             except Exception:
                 pass
