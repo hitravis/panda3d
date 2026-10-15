@@ -276,7 +276,7 @@ PUBLISHED:
 #endif // !NDEBUG || !CPPPARSER
 
 PUBLISHED:
-  virtual bool has_extension(const std::string &extension) const;
+  virtual bool has_extension(std::string_view extension) const;
 
   virtual std::string get_driver_vendor();
   virtual std::string get_driver_renderer();
@@ -421,6 +421,7 @@ public:
   INLINE bool reset_if_new();
   INLINE void mark_new();
   virtual void reset();
+  virtual bool make_current();
 
   INLINE CPT(TransformState) get_external_transform() const;
   INLINE CPT(TransformState) get_internal_transform() const;

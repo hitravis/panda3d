@@ -771,7 +771,7 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
  * directly; call GraphicsEngine::update_shader_buffer_data() instead.
  *
  * This method will be called in the draw thread to upload data to (a part of)
- * the shader buffer from the CPU.
+ * the shader buffer from the CPU.  If data is null, clears the buffer instead.
  */
 bool GraphicsStateGuardian::
 update_shader_buffer_data(ShaderBuffer *buffer, size_t start, size_t size,
@@ -3085,6 +3085,15 @@ reset() {
 }
 
 /**
+ * Ensures that the context is current.  May return false if the context cannot
+ * be bound without a window.
+ */
+bool GraphicsStateGuardian::
+make_current() {
+  return false;
+}
+
+/**
  * Simultaneously resets the render state and the transform state.
  *
  * This transform specified is the "internal" net transform, already converted
@@ -4018,7 +4027,7 @@ ensure_generated_shader(const RenderState *state) {
  * string.  This currently is only implemented by the OpenGL back-end.
  */
 bool GraphicsStateGuardian::
-has_extension(const string &extension) const {
+has_extension(std::string_view extension) const {
   return false;
 }
 

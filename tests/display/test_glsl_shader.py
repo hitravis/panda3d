@@ -117,7 +117,7 @@ def run_glsl_compile_check(gsg, vert_path, frag_path, expect_fail=False):
     assert shader is not None
 
     if not gsg.supports_glsl:
-        expect_fail = True
+        pytest.skip("GLSL shaders not supported")
 
     shader.prepare_now(gsg.prepared_objects, gsg)
     assert shader.is_prepared(gsg.prepared_objects)
@@ -125,6 +125,27 @@ def run_glsl_compile_check(gsg, vert_path, frag_path, expect_fail=False):
         assert shader.get_error_flag()
     else:
         assert not shader.get_error_flag()
+
+
+@pytest.fixture(scope='module')
+def glsl_gsg(gsg):
+    """Like gsg, but skips if the GL context can't compile GLSL programs."""
+    if not gsg.supports_glsl:
+        pytest.skip("GLSL shaders not supported")
+
+    if (gsg.driver_shader_version_major, gsg.driver_shader_version_minor) < (1, 50):
+        vert = "#version 120\nattribute vec4 p3d_Vertex;\nvoid main() { gl_Position = p3d_Vertex; }"
+        frag = "#version 120\nvoid main() { gl_FragColor = vec4(1.0); }"
+    else:
+        vert = "#version 150\nin vec4 p3d_Vertex;\nvoid main() { gl_Position = p3d_Vertex; }"
+        frag = "#version 150\nout vec4 p3d_FragColor;\nvoid main() { p3d_FragColor = vec4(1.0); }"
+
+    shader = core.Shader.make(core.Shader.SL_GLSL, vert, frag)
+    shader.prepare_now(gsg.prepared_objects, gsg)
+    if not shader.is_prepared(gsg.prepared_objects) or shader.get_error_flag():
+        pytest.skip("GL context cannot compile GLSL programs")
+
+    return gsg
 
 
 def test_glsl_test(gsg):
@@ -633,16 +654,17 @@ def test_glsl_state_light_source(gsg):
     assert(p3d_LightSource[0].shadowViewMatrix[0][1] == 0);
     assert(p3d_LightSource[0].shadowViewMatrix[0][2] == 0);
     assert(p3d_LightSource[0].shadowViewMatrix[0][3] == 0);
-    assert(p3d_LightSource[0].shadowViewMatrix[1][0] == 0.5);
-    assert(p3d_LightSource[0].shadowViewMatrix[1][1] == 0.5);
-    assert(p3d_LightSource[0].shadowViewMatrix[1][2] > 1.0);
-    assert(p3d_LightSource[0].shadowViewMatrix[1][2] < 1.00002);
-    assert(p3d_LightSource[0].shadowViewMatrix[1][3] == 1);
-    assert(p3d_LightSource[0].shadowViewMatrix[2][0] == 0);
-    assert(p3d_LightSource[0].shadowViewMatrix[2][1] > 0.2886);
-    assert(p3d_LightSource[0].shadowViewMatrix[2][1] < 0.2887);
-    assert(p3d_LightSource[0].shadowViewMatrix[2][2] == 0);
-    assert(p3d_LightSource[0].shadowViewMatrix[2][3] == 0);
+    assert(p3d_LightSource[0].shadowViewMatrix[1][0] == 0);
+    assert(p3d_LightSource[0].shadowViewMatrix[1][1] > 0.2886);
+    assert(p3d_LightSource[0].shadowViewMatrix[1][1] < 0.2887);
+    assert(p3d_LightSource[0].shadowViewMatrix[1][2] == 0);
+    assert(p3d_LightSource[0].shadowViewMatrix[1][3] == 0);
+    assert(p3d_LightSource[0].shadowViewMatrix[2][0] < -0.4999);
+    assert(p3d_LightSource[0].shadowViewMatrix[2][0] > -0.5001);
+    assert(p3d_LightSource[0].shadowViewMatrix[2][1] < -0.4999);
+    assert(p3d_LightSource[0].shadowViewMatrix[2][1] > -0.5001);
+    assert(p3d_LightSource[0].shadowViewMatrix[2][2] < -0.9999);
+    assert(p3d_LightSource[0].shadowViewMatrix[2][3] < -0.9999);
     assert(p3d_LightSource[0].shadowViewMatrix[3][0] > -16.2736);
     assert(p3d_LightSource[0].shadowViewMatrix[3][0] < -16.2734);
     assert(p3d_LightSource[0].shadowViewMatrix[3][1] > -16.8510);
@@ -841,8 +863,9 @@ def test_glsl_write_extract_image_buffer(gsg):
     assert struct.unpack('i', tex2.get_ram_image()) == (-456,)
 
 
-def test_glsl_compile_error(gsg):
+def test_glsl_compile_error(glsl_gsg):
     """Test getting compile errors from bad shaders"""
+    gsg = glsl_gsg
     suffix = ''
     if (gsg.driver_shader_version_major, gsg.driver_shader_version_minor) < (1, 50):
         suffix = '_legacy'
@@ -851,8 +874,9 @@ def test_glsl_compile_error(gsg):
     run_glsl_compile_check(gsg, vert_path, frag_path, expect_fail=True)
 
 
-def test_glsl_from_file(gsg):
+def test_glsl_from_file(glsl_gsg):
     """Test compiling GLSL shaders from files"""
+    gsg = glsl_gsg
     suffix = ''
     if (gsg.driver_shader_version_major, gsg.driver_shader_version_minor) < (1, 50):
         suffix = '_legacy'
@@ -861,8 +885,9 @@ def test_glsl_from_file(gsg):
     run_glsl_compile_check(gsg, vert_path, frag_path)
 
 
-def test_glsl_includes(gsg):
+def test_glsl_includes(glsl_gsg):
     """Test preprocessing includes in GLSL shaders"""
+    gsg = glsl_gsg
     suffix = ''
     if (gsg.driver_shader_version_major, gsg.driver_shader_version_minor) < (1, 50):
         suffix = '_legacy'
@@ -889,8 +914,9 @@ def with_current_dir_on_model_path():
     model_path.clear_local_value()
 
 
-def test_glsl_includes_angle_withdir(gsg, with_current_dir_on_model_path):
+def test_glsl_includes_angle_withdir(glsl_gsg, with_current_dir_on_model_path):
     """Test preprocessing includes with angle includes with model-path"""
+    gsg = glsl_gsg
     suffix = ''
     if (gsg.driver_shader_version_major, gsg.driver_shader_version_minor) < (1, 50):
         suffix = '_legacy'

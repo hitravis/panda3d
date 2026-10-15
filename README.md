@@ -145,9 +145,6 @@ you may build Panda3D using a command like the following:
 python makepanda/makepanda.py --everything --installer
 ```
 
-You may target a specific minimum macOS version using the --osxtarget flag
-followed by the release number, eg. 10.9 or 10.14.
-
 If the build was successful, makepanda will have generated a .dmg file in
 the source directory containing the installer.  Simply open it and run the
 package file in order to install the SDK onto your system.
@@ -243,7 +240,7 @@ visit the [Sponsors page](https://www.panda3d.org/sponsors) on our web site.
 Thank you to everyone who has donated!
 
 [<img src="https://www.panda3d.org/wp-content/uploads/2024/08/Route4MeLogo1185x300-2-1-1024x259.png" alt="Route4Me" height="48">](https://route4me.com/)
-[<img src="https://www.lambdatest.com/blue-logo.png" alt="LambdaTest" height="48">](https://www.lambdatest.com/?utm_source=panda3d&utm_medium=sponsor)
+[<img src="https://www.panda3d.org/wp-content/uploads/2026/01/black-logo-1-e1768931551108.png" alt="TestMu AI" height="48">](https://www.testmu.ai/?utm_source=panda3d&utm_medium=sponsor)
 
 <a href="https://opencollective.com/panda3d" target="_blank">
   <img src="https://opencollective.com/panda3d/contribute/button@2x.png?color=blue" width=300 />

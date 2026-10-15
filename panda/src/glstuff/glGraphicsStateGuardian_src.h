@@ -290,7 +290,7 @@ public:
 
   static void APIENTRY debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, GLvoid *userParam);
 
-  INLINE virtual void push_group_marker(const std::string &marker) final;
+  INLINE virtual void push_group_marker(std::string_view marker) final;
   INLINE virtual void pop_group_marker() final;
 
   virtual void reset();
@@ -514,17 +514,18 @@ protected:
   static bool report_errors_loop(int line, const char *source_file,
                                  GLenum error_code, int &error_count);
   static std::string get_error_string(GLenum error_code);
-  std::string show_gl_string(const std::string &name, GLenum id);
+  std::string show_gl_string(std::string_view name, GLenum id);
   virtual void query_gl_version();
   void query_glsl_version();
   void save_extensions(const char *extensions);
   virtual void get_extra_extensions();
   void report_extensions() const;
-  INLINE virtual bool has_extension(const std::string &extension) const;
+  INLINE virtual bool has_extension(std::string_view extension) const;
   INLINE bool is_at_least_gl_version(int major_version, int minor_version) const;
   INLINE bool is_at_least_gles_version(int major_version, int minor_version) const;
   void *get_extension_func(const char *name);
   virtual void *do_get_extension_func(const char *name);
+  virtual bool may_support_cg_shaders();
 
   virtual void reissue_transforms();
 
@@ -669,9 +670,9 @@ protected:
   void check_nonresident_texture(BufferContextChain &chain);
   bool do_extract_texture_data(CLP(TextureContext) *gtc, int view);
   bool extract_texture_image(PTA_uchar &image, size_t &page_size,
-           Texture *tex, GLenum target, GLenum page_target,
-           Texture::ComponentType type,
-           Texture::CompressionMode compression, int n);
+                             Texture *tex, GLenum target,
+                             Texture::ComponentType type,
+                             Texture::CompressionMode compression, int n);
 
 #ifdef SUPPORT_FIXED_FUNCTION
   void do_point_size();
@@ -757,7 +758,7 @@ protected:
 
 #if defined(HAVE_CG) && !defined(OPENGLES)
   CGcontext _cg_context;
-  static AtomicAdjust::Integer _num_gsgs_with_cg_contexts;
+  static patomic<int> _num_gsgs_with_cg_contexts;
   static small_vector<CGcontext> _destroyed_cg_contexts;
 #endif
 
@@ -822,7 +823,7 @@ protected:
   // #--- Zhao Nov2011
   int _gl_shadlang_ver_major, _gl_shadlang_ver_minor;
 
-  pset<std::string> _extensions;
+  pset<std::string, std::less<>> _extensions;
 
 #ifndef OPENGLES
   // True for non-compatibility GL 3.2+ contexts.
@@ -888,6 +889,7 @@ public:
   bool _supports_clear_buffer;
 #ifndef OPENGLES
   PFNGLCLEARBUFFERDATAPROC _glClearBufferData;
+  PFNGLCLEARBUFFERSUBDATAPROC _glClearBufferSubData;
 #endif
 
   PFNGLCOMPRESSEDTEXIMAGE1DPROC _glCompressedTexImage1D;
@@ -1025,7 +1027,11 @@ public:
   PFNGLBINDTEXTUREUNITPROC _glBindTextureUnit;
   PFNGLMAPNAMEDBUFFERRANGEPROC _glMapNamedBufferRange;
   PFNGLNAMEDBUFFERSUBDATAPROC _glNamedBufferSubData;
+  PFNGLCLEARNAMEDBUFFERSUBDATAPROC _glClearNamedBufferSubData;
+  PFNGLCOPYNAMEDBUFFERSUBDATAPROC _glCopyNamedBufferSubData;
   PFNGLGETNAMEDBUFFERSUBDATAPROC _glGetNamedBufferSubData;
+#else
+  static const bool _supports_dsa = false;
 #endif
 
 #ifndef OPENGLES_1
